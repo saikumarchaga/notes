@@ -1,0 +1,275 @@
+build docker image using jenkins pipeline
+-----------------------------------------------
+create ec2-server 
+install java version and add the java-home path to .bashprofile
+  JAVA_HOME=/usr/lib/jvm/java-11-openjdk-11.0.16.0.8-1.amzn2.0.1.x86_64
+  PATH=$PATH:$JAVA_HOME
+install jenkins from web 
+yum install jenkins 
+start jenkins
+install maven from web 
+tar -zxvf maven
+yum install maven
+add path to .bashprofile
+login to jenkins dashboard
+install git
+go to jenkins dashboard
+first install all 3 plugins
+prerequsite:--install plugins
+1.maven integration
+2.pipeline maven integration
+
+goto jenkins configuration -- global tool--add path jdk and maven 
+
+
+(*goto project-pipeline-GitHub project (give project url)--
+
+JAVA_HOME=/usr/lib/jvm/java-11-openjdk-11.0.16.0.8-1.amzn2.0.1.x86_64
+PATH=$PATH:$JAVA_HOME
+
+M2_HOME=/opt/maven/apache-maven-3.5.3m
+M2=$M2_HOME/bin
+
+PATH=$PATH:$JAVA_HOME:$M2_HOME:$M2:$HOME/bin
+
+Install plugins--maven invoker,github)
+-------------
+error
+------------
+1. when do jenkins ;-fix Job for jenkins.service failed because the control process exited with error code. See "systemctl status jenkins.service" and "journalctl -xe" for details.(solution:-install java of new version)
+
+2.Failed to execute goal org.apache.maven.plugins:maven-compiler-plugin:3.8.1:compile (default-compile) on project spring-petclinic: Fatal error compiling: error: invalid target release: 1.8.0 -> [Help 1]
+
+
+yum remove java*
+sudo update-alternatives --config java
+
+find /usr/lib/jvm/java-11* | head -n 3
+
+
+
+pipeline {
+    agent any
+    tools {
+        maven 'maven'
+    }
+    stages {
+        stage('Build Maven') {
+            steps{
+                  #for script click on pipeline syntax . on step click on (checkout: check out from version control)on SCM select(Git) repository URL(paste github repo url)on credential add(scope[global]username(github usernam)password(github) add check master/main click on [generate script]copy the script and paste in pipeline script
+
+                #paste here
+                sh  "mvn -Dmaven.test.failure.ignore=true clean package"
+            }
+        }
+       
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    sh 'docker build -t petclinic . '
+                    sh 'docker tag petclinic:latest saikumar4268/petclinic'
+                }
+            }
+        }
+        stage('Push Docker image') {
+            steps {
+                script { #for script goto pipeline syntax (under sample select[withCredentials:blind credentials to variable] (under Bindings add[secret text]) variable[dockerhubpwd] add[ kind[secret text] secret[provide docker hub passwd] ID [dockerhub id] add [add] generate pipeline script [copy the scrtipt and paste in pipecript]{
+                    sh 'docker login -u saikumar4268 -p ${dockerhubpwd}'
+}
+                               
+                    sh 'docker push saikumar4268/petclinic'
+                }
+            }
+        }
+                    
+    }
+}
+
+
+
+
+youtube link :- Installing & Configure Maven on AWS EC2 instance | Maven setup & configuration on Jenkins
+
+---------------------------------------
+build docker image push to docker hub in jenkins
+-----------------------------------------------
+vi ~/.bashrc
+[sudo update-alternatives --config java
+2
+Step 2: Find out where JAVA is!
+$ file $(which java)
+/usr/bin/java: symbolic link to `/etc/alternatives/java'
+Step 2: Find out where JAVA is!
+$ file /etc/alternatives/java
+/etc/alternatives/java: symbolic link to `/usr/lib/jvm/java-8-openjdk.x86_64/bin/java'
+You can re-affirm the location running  file command on the symbolic path:
+$ file /usr/lib/jvm/java-8-openjdk.x86_64/bin/java
+/usr/lib/jvm/java-8-openjdk.x86_64/bin/java: ELF 64-bit LSB executable...
+Step 4:  Set JAVA environment variable 
+To set the JAVA_HOME environment variables on Linux/Unix go to .baschrc file.
+ export JAVA_HOME="/usr/lib/jvm/jdk-1.8.0-openjdk.x86_64"
+
+ PATH=$JAVA_HOME/bin:$PATH
+
+Save the file and run the following command:
+
+source .bashrc
+
+You check the JAVA and environment variable using this command :
+
+$ echo $JAVA_HOME
+$ echo $PATH
+
+export JAVA_HOME="/usr/lib/jvm/java-17-amazon-corretto.x86_64"
+
+export PATH=$JAVA_HOME/bin:$PATH
+
+export M2_HOME="/opt/apache-maven-3.8.6"
+
+export PATH=$PATH:$M2_HOME/bin   ]
+
+source ~/.bashrc
+
+sudo usermod -a -G docker root
+grep docker /etc/group
+-newgrp docker
+chmod 777 /var/run/docker.sock
+
+
+pipeline {
+    agent any
+    tools {
+        maven 'maven'
+    }
+    stages {
+        stage('Build Maven') {
+            steps{checkout([$class: 'GitSCM', branches: [[name: '*/main']], extensions: [], userRemoteConfigs: [[credentialsId: 'github-credential', url: 'https://github.com/saikumarchaga/spring-petclinic.git']]])
+                sh  "./mvnw clean package"
+            }
+        }
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    sh 'docker build -t spring-petclinic . '
+                    sh 'docker tag spring-petclinic:latest saikumar4268/spring-petclinic'
+                }
+            }
+        }
+        stage('Push Docker image') {
+            steps {
+                withCredentials([string(credentialsId: 'saikumar4268', variable: 'dockerhubpwd')]) {
+                sh 'docker login -u saikumar4268 -p ${dockerhubpwd}'       
+}
+                sh 'docker push saikumar4268/spring-petclinic'
+                }
+            }
+        }
+                    
+    }
+
+-------
+sucess
+------
+    1  ls
+    2  yum update
+    3  amazon-linux-extras java-openjdk11
+    4  amazon-linux-extras install java-openjdk11
+    5  java -verion
+    6  java -version
+    7  yum install maven
+    8  sudo wget -O /etc/yum.repos.d/jenkins.repo     https://pkg.jenkins.io/redhat-stable/jenkins.repo
+    9  sudo rpm --import https://pkg.jenkins.io/redhat-stable/jenkins.io.key
+   10  sudo yum upgrade
+   11  sudo yum install jenkins
+   12  systemctl start jenkins
+   13  yum install git -y
+   14  git clone https://github.com/saikumarchaga/spring-petclinic.git
+   15  ls
+   16  cd spring-petclinic
+   17  mvn -version
+   18  ls
+   19  ./mvnw package
+   20  ls
+   21  ls target
+   22  java -jar target/*.jar
+   23  cat /var/lib/jenkins/secrets/initialAdminPassword
+   24  0a0ceb71f31c429d9fd179af353f2471
+   25  java -jar target/*.jar
+   26  clear
+   27  mvn -version
+   28  ls -lr
+   29  cd ..
+   30  ls
+   31  ls -lrt
+   32  cd /root
+   33  ls -l
+   34  ls -lrt
+   35  mvn -version
+   36  cat .bash_profile
+   37  vi .bash_profile
+   38  echo $PATH
+   39  yum install docker
+   40  cd spring-petclinic
+   41  ls
+   42  cd /var/lib/jenkins/workspace/job
+   43  ls
+   44  cat pom.xml
+   45  cat mvnw
+   46  cd /root
+   47  sudo update-alternatives --config java
+   48  file $(which java)
+   49  file /etc/alternatives/java
+   50  file /usr/lib/jvm/java-17-amazon-corretto.x86_64/bin/java
+   51  cat .baschrc
+   52  ls -l
+   53  vi .baschrc
+   54  rm -f .baschrc
+   55  cat .bashrc
+   56  vi .bashrc
+   57  source .bashrc
+   58  echo $JAVA_HOME
+   59  echo $PATH
+   60  mvn -version
+   61  mv /usr/share/maven opt/maven
+   62  mv /usr/share/maven opt/
+   63  mvn -version
+   64  yum install maven
+   65  yum remove maven
+   66  mvn -version
+   67  wget https://dlcdn.apache.org/maven/maven-3/3.8.6/binaries/apache-maven-3.8.6-bin.tar.gz
+   68  ls
+   69  mv apache-maven-3.8.6-bin.tar.gz /opt
+   70  ls
+   71  cd /opt
+   72  ls
+   73  tar -zxvf apache-maven-3.8.6-bin.tar.gz
+   74  ls
+   75  cd apache-maven-3.8.6
+   76  ls
+   77  pwd
+   78  vi .bashrc
+   79  ls
+   80  cat ./bashrc
+   81  cat ~/.bashrc
+   82  vi ~/.bashrc
+   83  source ~/.bashrc
+   84  mvn -version
+   85  echo $M2_HOME
+   86  mvn -version
+   87  cd /var/lib/jenkins/workspace/job
+   88  ls
+   89  ls target
+   90  java -jar target/*.jar
+   91  systemctl start jenkins
+   92  systemctl status jenkins
+   93  systemctl stop jenkins
+   94  systemctl status jenkins
+   95  systemctl start jenkins
+   96  systemctl status jenkins
+   97  clear
+   98  ls
+   99  cd spring-petclinic
+  100  ls
+  101  chmod 777 /var/run/docker.sock
+  102  systemctl stop jenkins
+  103  systemctl start jenkins
