@@ -1,0 +1,188 @@
+aws --version
+*install aws cli
+sudo ./aws/install
+aws --version
+exit
+sudo -i
+aws --version
+*install kubectl
+chmod +x ./kubectl
+echo $PATH
+ -USRR/local/$bin:/usr
+kubectl version
+ -client
+eksctl version
+ -not found
+*install eks
+cd /tmp
+ll
+ -eksctl
+mv eksctl usr/local/bin
+eksctl version
+ -0.111.0
+*goto IAM create roles click on "ec2" permission "EC2full","IAMFULL","ADMINSFULL","ColudForm" create . 
+*goto action -modify iam - select created role
+eksctl create cluster --name sai-devops-02 --region ap-south-1 --node-type t2.micro 
+kubectl get nodes
+ -
+eksctl get cluster
+kubectl create deployment web-app --image=nginx --port=80 --replicas=2
+ -deployment
+kubectl get deployment
+ -webapps
+kubectl get rs
+ -
+kubectl get pods
+ -
+kubectl expose deployment web-app --port=80 --type=LoadBalancer
+ -service
+kubectl get all
+ -
+
+
+
+
+
+eksctl create cluster --name jhooq-test-cluster --version 1.17 --region eu-central-1 --nodegroup-name worker-nodes --node-type t2.micro --nodes 2
+
+eksctl create cluster --name sai-devops-01 --region ap-south-1 --node-type t2.micro --nodes 2
+
+eksctl delete cluster --name sai-devops-01 --region ap-south-1
+
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: petclinic-deployment
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: petclinic
+  template:
+    metadata:
+      labels:
+        app: petclinic
+    spec:
+      containers:
+        - name: petclinic
+          image: saikumar4268/spring-petclinic-2.4.5.jar  
+          ports:
+            - containerPort: 9090 
+          env:
+            - name: PORT
+              value: "9090"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: petclinic-service
+spec:
+  type: LoadBalancer
+  ports:
+    - port: 80
+      targetPort: 9090
+  selector:
+    app: petclinic-service
+
+
+kubectl scale deploy petclinic-deployment --replicas-4
+
+git token  (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
+
+
+node {
+
+    stage("Git Clone"){
+
+        git credentialsId: 'GIT_HUB_CREDENTIALS', url: 'https://github.com/rahulwagh/k8s-jenkins-aws'
+    }
+
+     stage('Gradle Build') {
+
+       sh './gradlew build'
+
+    }
+
+    stage("Docker build"){
+        sh 'docker version'
+        sh 'docker build -t jhooq-docker-demo .'
+        sh 'docker image list'
+        sh 'docker tag jhooq-docker-demo rahulwagh17/jhooq-docker-demo:jhooq-docker-demo'
+    }
+
+    withCredentials([string(credentialsId: 'DOCKER_HUB_PASSWORD', variable: 'PASSWORD')]) {
+        sh 'docker login -u rahulwagh17 -p $PASSWORD'
+    }
+
+    stage("Push Image to Docker Hub"){
+        sh 'docker push  rahulwagh17/jhooq-docker-demo:jhooq-docker-demo'
+    }
+    
+    stage("kubernetes deployment"){
+        sh 'kubectl apply -f k8s-spring-boot-deployment.yml'
+    }
+} 
+
+
+
+node {
+
+    stage("Git Clone"){
+
+        git credentialsId: 'GIT_HUB_CREDENTIALS', url: 'https://github.com/saikumarchaga/spring-petclinic.git'
+    }
+
+     stage('Maven Build') {
+
+       sh 'mvn clean package'
+       sh 'mv target/*.war target/spring-petclinic.war'
+
+    }
+
+    stage("Docker build"){
+        sh 'docker version'
+        sh 'docker build -t spring .'
+        sh 'docker image list'
+        sh 'docker tag spring saikumar4268/spring:spring'
+    }
+
+    withCredentials([string(credentialsId: 'DOCKER_HUB_PASSWORD', variable: 'PASSWORD')]) {
+        sh 'docker login -u saikumar4268 -p $PASSWORD'
+    }
+
+    stage("Push Image to Docker Hub"){
+        sh 'docker push  saikumar4268/spring:spring'
+    }
+} 
+
+
+pipeline{
+    agent any
+    
+    environment{
+        PATH = /opt/apache-maven-3.6.3/bin:$PATH
+    }
+    stages{
+        stage("Git Checkout"){
+            steps{
+                git credentialsId: 'GIT_HUB_CREDENTIALS', url: 'https://github.com/saikumarchaga/spring-petclinic.git'
+            }
+        }
+        stage("Maven Build"){
+            steps{
+                sh "mvn clean package"
+                sh "mv target/*.war target/spring-petclinic.war"
+            }
+        }
+        stage("Docker build"){
+            steps{
+                sh 'docker version'
+                sh 'docker build -t spring .'
+                sh 'docker image list'
+                sh 'docker tag spring saikumar4268/spring:spring'
+            }
+        }
+        }
+}
